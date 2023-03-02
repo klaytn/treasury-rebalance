@@ -76,7 +76,7 @@ describe("TreasuryRebalance", function () {
         });
 
         it("Should not register sender when contract is not in Initialized state", async function () {
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             await expect(treasuryRebalance.registerSender(sender1)).to.be.revertedWith(
                 "function not allowed at this stage"
             );
@@ -122,7 +122,7 @@ describe("TreasuryRebalance", function () {
         });
 
         it("Should not remove sender when contract is not in Initialized state", async function () {
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             await expect(treasuryRebalance.removeSender(sender1)).to.be.revertedWith(
                 "function not allowed at this stage"
             );
@@ -166,7 +166,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should revert if receiver when contract is not in Initialized state", async function () {
             const amount1 = hre.ethers.utils.parseEther("20");
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             await expect(treasuryRebalance.registerReceiver(receiverAddress, amount1)).to.be.revertedWith(
                 "function not allowed at this stage"
             );
@@ -215,7 +215,7 @@ describe("TreasuryRebalance", function () {
         });
 
         it("Should not remove receiver when contract is not in Initialized state", async function () {
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             await expect(treasuryRebalance.removeReceiver(receiverAddress)).to.be.revertedWith(
                 "function not allowed at this stage"
             );
@@ -229,7 +229,7 @@ describe("TreasuryRebalance", function () {
             await treasuryRebalance.registerSender(owner.address);
             await treasuryRebalance.registerSender(receiver1.address);
             await treasuryRebalance.registerSender(treasuryRebalance.address);
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
         });
 
         it("Should approve sender if msg.sender is admin of sender contract", async function () {
@@ -297,81 +297,93 @@ describe("TreasuryRebalance", function () {
 
         it("Should set status to Registered", async function () {
             expect(initialStatus).to.equal(0);
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             expect(await treasuryRebalance.status()).to.equal(1);
         });
 
         it("Should set status to Approved", async function () {
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             await treasuryRebalance.approve(sender1);
             await treasuryRebalance.approve(sender2);
-            await treasuryRebalance.setStatus(2);
+            await treasuryRebalance.finalizeApproval();
             expect(await treasuryRebalance.status()).to.equal(2);
         });
 
         it("Should not set status to Approved when treasury amount exceeds balance of senders", async function () {
             const amount = hre.ethers.utils.parseEther("50");
             await treasuryRebalance.registerReceiver(receiver1.address, amount);
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             await treasuryRebalance.approve(sender1);
             await treasuryRebalance.approve(sender2);
-            await expect(treasuryRebalance.setStatus(2)).to.be.revertedWith(
+            await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
                 "treasury amount should be less than the sum of all sender address balances"
             );
         });
 
         it("Should revert if the current status is tried to set again", async function () {
-            await treasuryRebalance.setStatus(1);
-            await expect(treasuryRebalance.setStatus(1)).to.be.revertedWith("Invalid input status");
+            await treasuryRebalance.finalizeRegistration();
+            await expect(treasuryRebalance.finalizeRegistration()).to.be.revertedWith(
+                "function not allowed at this stage"
+            );
         });
 
-        it("Should revert if owner tries to set Initialized after Registered", async function () {
-            await treasuryRebalance.setStatus(1);
-            await expect(treasuryRebalance.setStatus(0)).to.be.revertedWith("Invalid input status");
+        it("Should revert if owner tries to set Finalize after Registered", async function () {
+            await treasuryRebalance.finalizeRegistration();
+            await expect(treasuryRebalance.finalizeContract("memo")).to.be.revertedWith(
+                "function not allowed at this stage"
+            );
         });
 
         it("Should revert if owner tries to set Approved before Registered", async function () {
-            await expect(treasuryRebalance.setStatus(2)).to.be.revertedWith("Invalid input status");
+            await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith("function not allowed at this stage");
         });
 
         it("Should revert if owner tries to set Registered after Approved", async function () {
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             await treasuryRebalance.approve(sender1);
             await treasuryRebalance.approve(sender2);
-            await treasuryRebalance.setStatus(2);
-            await expect(treasuryRebalance.setStatus(1)).to.be.revertedWith("Invalid input status");
+            await treasuryRebalance.finalizeApproval();
+            await expect(treasuryRebalance.finalizeRegistration()).to.be.revertedWith(
+                "function not allowed at this stage"
+            );
         });
 
         it("Should emit SetStatus event", async function () {
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             await treasuryRebalance.approve(sender1);
             await treasuryRebalance.approve(sender2);
-            await expect(treasuryRebalance.setStatus(2)).to.emit(treasuryRebalance, "SetStatus").withArgs(1, 2);
+            await expect(treasuryRebalance.finalizeApproval()).to.emit(treasuryRebalance, "SetStatus").withArgs(2);
         });
 
         describe("Reach Quorom", function () {
             it("Should revert if min required admins does not approve", async function () {
-                await treasuryRebalance.setStatus(1);
-                await expect(treasuryRebalance.setStatus(2)).to.be.revertedWith("min required admins should approve");
+                await treasuryRebalance.finalizeRegistration();
+                await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
+                    "min required admins should approve"
+                );
             });
 
             it("Should revert if approved admin change during the contract ", async function () {
-                await treasuryRebalance.setStatus(1);
+                await treasuryRebalance.finalizeRegistration();
                 await treasuryRebalance.approve(sender1);
                 await treasuryRebalance.approve(sender2);
                 await kgf.addAdmin(account1.address);
                 await kgf.changeMinReq(2);
-                await expect(treasuryRebalance.setStatus(2)).to.be.revertedWith("min required admins should approve");
+                await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
+                    "min required admins should approve"
+                );
 
                 await treasuryRebalance.connect(account1).approve(sender1);
-                await treasuryRebalance.setStatus(2);
+                await treasuryRebalance.finalizeApproval();
             });
 
             it("Should revert if approved admin change during the contract ", async function () {
-                await treasuryRebalance.setStatus(1);
+                await treasuryRebalance.finalizeRegistration();
                 await treasuryRebalance.approve(sender1);
                 await kgf.changeMinReq(2);
-                await expect(treasuryRebalance.setStatus(2)).to.be.revertedWith("min required admins should approve");
+                await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
+                    "min required admins should approve"
+                );
 
                 await expect(treasuryRebalance.connect(account1).approve(sender1), "msg.sender is not the admin");
             });
@@ -384,27 +396,27 @@ describe("TreasuryRebalance", function () {
         beforeEach(async function () {
             await treasuryRebalance.registerSender(sender1);
             await treasuryRebalance.registerSender(sender2);
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             await treasuryRebalance.approve(sender1);
             await treasuryRebalance.approve(sender2);
         });
 
         it("should set the memo and status to Finalized", async function () {
-            await treasuryRebalance.setStatus(2);
+            await treasuryRebalance.finalizeApproval();
             await treasuryRebalance.finalizeContract(memo);
             expect(await treasuryRebalance.memo()).to.equal(memo);
             expect(await treasuryRebalance.status()).to.equal(3);
         });
 
         it("Should emit Finalize event", async function () {
-            await treasuryRebalance.setStatus(2);
+            await treasuryRebalance.finalizeApproval();
             await expect(treasuryRebalance.finalizeContract(memo))
                 .to.emit(treasuryRebalance, "Finalized")
                 .withArgs(memo, 3);
         });
 
         it("should revert if not called by the owner", async () => {
-            await treasuryRebalance.setStatus(2);
+            await treasuryRebalance.finalizeApproval();
             await expect(treasuryRebalance.connect(account1).finalizeContract(memo)).to.be.revertedWith(
                 "Ownable: caller is not the owner"
             );
@@ -438,7 +450,7 @@ describe("TreasuryRebalance", function () {
             await treasuryRebalance.registerSender(sender2);
 
             await treasuryRebalance.registerReceiver(receiver1.address, amount);
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
             expect(await treasuryRebalance.getSenderCount()).to.equal(2);
             expect(await treasuryRebalance.getReceiverCount()).to.equal(1);
 
@@ -455,10 +467,10 @@ describe("TreasuryRebalance", function () {
             const amount = hre.ethers.utils.parseEther("10");
             await treasuryRebalance.registerSender(sender1);
             await treasuryRebalance.registerReceiver(receiver1.address, amount);
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
 
             await treasuryRebalance.approve(sender1);
-            await treasuryRebalance.setStatus(2);
+            await treasuryRebalance.finalizeApproval();
             expect(await treasuryRebalance.status()).to.equal(2);
 
             expect(await treasuryRebalance.getSenderCount()).to.equal(1);
@@ -477,10 +489,10 @@ describe("TreasuryRebalance", function () {
             const amount = hre.ethers.utils.parseEther("10");
             await treasuryRebalance.registerSender(sender1);
             await treasuryRebalance.registerReceiver(receiver1.address, amount);
-            await treasuryRebalance.setStatus(1);
+            await treasuryRebalance.finalizeRegistration();
 
             await treasuryRebalance.approve(sender1);
-            await treasuryRebalance.setStatus(2);
+            await treasuryRebalance.finalizeApproval();
             await treasuryRebalance.finalizeContract("memo");
             expect(await treasuryRebalance.status()).to.equal(3);
 
