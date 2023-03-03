@@ -60,7 +60,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should emit a RegisterRetired event", async function () {
             await expect(treasuryRebalance.registerRetired(retired1))
-                .to.emit(treasuryRebalance, "RegisterRetired")
+                .to.emit(treasuryRebalance, "RetiredRegistered")
                 .withArgs(retired1, []);
         });
 
@@ -109,7 +109,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should emit a RemoveRetired event", async function () {
             await expect(treasuryRebalance.removeRetired(retired1))
-                .to.emit(treasuryRebalance, "RemoveRetired")
+                .to.emit(treasuryRebalance, "RetiredRemoved")
                 .withArgs(retired1, 0);
         });
 
@@ -154,7 +154,7 @@ describe("TreasuryRebalance", function () {
         it("Should emit a RegisterNewbie event", async function () {
             const amount = hre.ethers.utils.parseEther("20");
             await expect(treasuryRebalance.registerNewbie(newbieAddress, amount))
-                .to.emit(treasuryRebalance, "RegisterNewbie")
+                .to.emit(treasuryRebalance, "NewbieRegistered")
                 .withArgs(newbieAddress, amount);
         });
 
@@ -200,7 +200,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should emit RemoveNewbie event", async function () {
             await expect(treasuryRebalance.removeNewbie(newbieAddress))
-                .to.emit(treasuryRebalance, "RemoveNewbie")
+                .to.emit(treasuryRebalance, "NewbieRemoved")
                 .withArgs(newbieAddress, 0);
         });
 
@@ -241,7 +241,7 @@ describe("TreasuryRebalance", function () {
             const updatedRetiredDetails = await treasuryRebalance.getRetired(retired1);
             expect(updatedRetiredDetails[1][0]).to.equal(owner.address);
 
-            await expect(tx).to.emit(treasuryRebalance, "Approve").withArgs(retired1, owner.address, 1);
+            await expect(tx).to.emit(treasuryRebalance, "Approved").withArgs(retired1, owner.address, 1);
         });
 
         it("Should approve retiredAddress is the msg.sender if retired is a EOA", async function () {
@@ -252,9 +252,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should revert if retired is already approved", async function () {
             await treasuryRebalance.approve(retired1);
-            await expect(treasuryRebalance.approve(retired1)).to.be.revertedWith(
-                "Duplicate approvers cannot be allowed"
-            );
+            await expect(treasuryRebalance.approve(retired1)).to.be.revertedWith("Already approved");
         });
 
         it("Should revert if retired is not registered", async function () {
