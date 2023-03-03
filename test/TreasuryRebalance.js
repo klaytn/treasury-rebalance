@@ -2,29 +2,29 @@ const {expect} = require("chai");
 const {ethers} = require("hardhat");
 
 describe("TreasuryRebalance", function () {
-    let TreasuryRebalance, treasuryRebalance, kgf, kir, owner, sender1, sender2, receiver1, receiver2;
+    let TreasuryRebalance, treasuryRebalance, kgf, kir, owner, retired1, retired2, newbie1, newbie2;
     let currentBlock, executionBlock;
 
     beforeEach(async function () {
-        [owner, account1, receiver1, receiver2] = await ethers.getSigners();
+        [owner, account1, newbie1, newbie2] = await ethers.getSigners();
         currentBlock = await ethers.provider.getBlockNumber();
         executionBlock = currentBlock + 40;
 
-        // Deploy dependancy treasuryRebalances to register as senders
-        // sender1 and sender2 simulates KGF and KIR treasuryRebalances respectively
+        // Deploy dependancy treasuryRebalances to register as retireds
+        // retired1 and retired2 simulates KGF and KIR treasuryRebalances respectively
         const KGF = await ethers.getContractFactory("SenderTest1");
         kgf = await KGF.deploy();
-        sender1 = kgf.address;
+        retired1 = kgf.address;
 
         const KIR = await ethers.getContractFactory("SenderTest2");
         kir = await KIR.deploy();
-        sender2 = kir.address;
+        retired2 = kir.address;
 
-        // Send some funds to sender1 to simulate KFG funds
-        await owner.sendTransaction({to: sender1, value: hre.ethers.utils.parseEther("20")});
+        // Send some funds to retired1 to simulate KFG funds
+        await owner.sendTransaction({to: retired1, value: hre.ethers.utils.parseEther("20")});
 
-        // Send some funds to sender2 to simulate KIR funds
-        await owner.sendTransaction({to: sender2, value: hre.ethers.utils.parseEther("20")});
+        // Send some funds to retired2 to simulate KIR funds
+        await owner.sendTransaction({to: retired2, value: hre.ethers.utils.parseEther("20")});
 
         // Deploy Treasury Rebalance treasuryRebalance
         treasuryFund = hre.ethers.utils.parseEther("30");
@@ -34,10 +34,10 @@ describe("TreasuryRebalance", function () {
 
     describe("Deployment", function () {
         it("Should check the correct initial values for dependancy treasuryRebalances", async function () {
-            const sender1Balance = await ethers.provider.getBalance(sender1);
-            const sender2Balance = await ethers.provider.getBalance(sender1);
-            expect(await sender1Balance).to.equal(hre.ethers.utils.parseEther("20"));
-            expect(await sender2Balance).to.equal(hre.ethers.utils.parseEther("20"));
+            const retired1Balance = await ethers.provider.getBalance(retired1);
+            const retired2Balance = await ethers.provider.getBalance(retired1);
+            expect(await retired1Balance).to.equal(hre.ethers.utils.parseEther("20"));
+            expect(await retired2Balance).to.equal(hre.ethers.utils.parseEther("20"));
 
             const [adminList] = await kgf.getState();
             expect(adminList[0]).to.equal(owner.address);
@@ -50,173 +50,173 @@ describe("TreasuryRebalance", function () {
         });
     });
 
-    describe("registerSender()", function () {
-        it("Should add a sender", async function () {
-            await treasuryRebalance.registerSender(sender1);
-            const sender = await treasuryRebalance.getSender(sender1);
-            expect(sender[0]).to.equal(sender1);
-            expect(sender[1].length).to.equal(0);
+    describe("registerRetired()", function () {
+        it("Should add a retired", async function () {
+            await treasuryRebalance.registerRetired(retired1);
+            const retired = await treasuryRebalance.getRetired(retired1);
+            expect(retired[0]).to.equal(retired1);
+            expect(retired[1].length).to.equal(0);
         });
 
-        it("Should emit a RegisterSender event", async function () {
-            await expect(treasuryRebalance.registerSender(sender1))
-                .to.emit(treasuryRebalance, "RegisterSender")
-                .withArgs(sender1, []);
+        it("Should emit a RegisterRetired event", async function () {
+            await expect(treasuryRebalance.registerRetired(retired1))
+                .to.emit(treasuryRebalance, "RegisterRetired")
+                .withArgs(retired1, []);
         });
 
-        it("Should not allow adding the same sender twice", async function () {
-            await treasuryRebalance.registerSender(sender1);
-            await expect(treasuryRebalance.registerSender(sender1)).to.be.revertedWith("Sender is already registered");
+        it("Should not allow adding the same retired twice", async function () {
+            await treasuryRebalance.registerRetired(retired1);
+            await expect(treasuryRebalance.registerRetired(retired1)).to.be.revertedWith(
+                "Retired address is already registered"
+            );
         });
 
-        it("Should not allow non-owner to add a sender", async function () {
-            await expect(treasuryRebalance.connect(account1).registerSender(sender2)).to.be.revertedWith(
+        it("Should not allow non-owner to add a retired", async function () {
+            await expect(treasuryRebalance.connect(account1).registerRetired(retired2)).to.be.revertedWith(
                 "Ownable: caller is not the owner"
             );
         });
 
-        it("Should not register sender when contract is not in Initialized state", async function () {
+        it("Should not register retired when contract is not in Initialized state", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await expect(treasuryRebalance.registerSender(sender1)).to.be.revertedWith(
+            await expect(treasuryRebalance.registerRetired(retired1)).to.be.revertedWith(
                 "function not allowed at this stage"
             );
         });
 
-        it("senders length should be one", async function () {
-            await treasuryRebalance.registerSender(sender1);
-            const length = await treasuryRebalance.getSenderCount();
+        it("retireds length should be one", async function () {
+            await treasuryRebalance.registerRetired(retired1);
+            const length = await treasuryRebalance.getRetiredCount();
             expect(length).to.equal(1);
         });
 
-        it("Should revert if the sender address is zero", async function () {
-            await expect(treasuryRebalance.registerSender(ethers.constants.AddressZero)).to.be.revertedWith(
+        it("Should revert if the retired address is zero", async function () {
+            await expect(treasuryRebalance.registerRetired(ethers.constants.AddressZero)).to.be.revertedWith(
                 "Invalid address"
             );
         });
     });
 
-    describe("removeSender()", function () {
+    describe("removeRetired()", function () {
         beforeEach(async function () {
-            await treasuryRebalance.registerSender(sender1);
+            await treasuryRebalance.registerRetired(retired1);
         });
 
-        it("Should remove a sender", async function () {
-            await treasuryRebalance.removeSender(sender1);
-            await expect(treasuryRebalance.getSender(sender1)).to.be.revertedWith("Sender does not exist");
+        it("Should remove a retired", async function () {
+            await treasuryRebalance.removeRetired(retired1);
+            await expect(treasuryRebalance.getRetired(retired1)).to.be.revertedWith("Retired does not exist");
         });
 
-        it("Should emit a RemoveSender event", async function () {
-            await expect(treasuryRebalance.removeSender(sender1))
-                .to.emit(treasuryRebalance, "RemoveSender")
-                .withArgs(sender1, 0);
+        it("Should emit a RemoveRetired event", async function () {
+            await expect(treasuryRebalance.removeRetired(retired1))
+                .to.emit(treasuryRebalance, "RemoveRetired")
+                .withArgs(retired1, 0);
         });
 
-        it("Should not allow removing a non-existent sender", async function () {
-            await expect(treasuryRebalance.removeSender(owner.address)).to.be.revertedWith("Sender does not exist");
+        it("Should not allow removing a non-existent retired", async function () {
+            await expect(treasuryRebalance.removeRetired(owner.address)).to.be.revertedWith("Retired does not exist");
         });
 
-        it("Should not allow non-owner to remove a sender", async function () {
-            await expect(treasuryRebalance.connect(account1).removeSender(sender1)).to.be.revertedWith(
+        it("Should not allow non-owner to remove a retired", async function () {
+            await expect(treasuryRebalance.connect(account1).removeRetired(retired1)).to.be.revertedWith(
                 "Ownable: caller is not the owner"
             );
         });
 
-        it("Should not remove sender when contract is not in Initialized state", async function () {
+        it("Should not remove retired when contract is not in Initialized state", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await expect(treasuryRebalance.removeSender(sender1)).to.be.revertedWith(
+            await expect(treasuryRebalance.removeRetired(retired1)).to.be.revertedWith(
                 "function not allowed at this stage"
             );
         });
     });
 
-    describe("registerReceiver", function () {
-        let receiverAddress;
+    describe("registerNewbie", function () {
+        let newbieAddress;
 
         beforeEach(async function () {
-            receiverAddress = receiver1.address;
+            newbieAddress = newbie1.address;
         });
 
-        it("Should register receiver address and its fund distribution", async function () {
+        it("Should register newbie address and its fund distribution", async function () {
             const amount = hre.ethers.utils.parseEther("20");
 
-            await treasuryRebalance.registerReceiver(receiverAddress, amount);
-            const receiver = await treasuryRebalance.getReceiver(receiverAddress);
-            expect(receiver[0]).to.equal(receiverAddress);
-            expect(receiver[1]).to.equal(amount);
-            expect(await treasuryRebalance.getReceiverCount()).to.equal(1);
+            await treasuryRebalance.registerNewbie(newbieAddress, amount);
+            const newbie = await treasuryRebalance.getNewbie(newbieAddress);
+            expect(newbie[0]).to.equal(newbieAddress);
+            expect(newbie[1]).to.equal(amount);
+            expect(await treasuryRebalance.getNewbieCount()).to.equal(1);
 
             const treasuryAmount = await treasuryRebalance.getTreasuryAmount();
             expect(treasuryAmount).to.equal(amount);
         });
 
-        it("Should emit a RegisterReceiver event", async function () {
+        it("Should emit a RegisterNewbie event", async function () {
             const amount = hre.ethers.utils.parseEther("20");
-            await expect(treasuryRebalance.registerReceiver(receiverAddress, amount))
-                .to.emit(treasuryRebalance, "RegisterReceiver")
-                .withArgs(receiverAddress, amount);
+            await expect(treasuryRebalance.registerNewbie(newbieAddress, amount))
+                .to.emit(treasuryRebalance, "RegisterNewbie")
+                .withArgs(newbieAddress, amount);
         });
 
-        it("Should revert if register receiver twice", async function () {
+        it("Should revert if register newbie twice", async function () {
             const amount1 = hre.ethers.utils.parseEther("20");
-            await treasuryRebalance.registerReceiver(receiverAddress, amount1);
-            await expect(treasuryRebalance.registerReceiver(receiverAddress, amount1)).to.be.revertedWith(
-                "Receiver is already registered"
+            await treasuryRebalance.registerNewbie(newbieAddress, amount1);
+            await expect(treasuryRebalance.registerNewbie(newbieAddress, amount1)).to.be.revertedWith(
+                "Newbie address is already registered"
             );
         });
 
-        it("Should revert if receiver when contract is not in Initialized state", async function () {
+        it("Should revert if newbie when contract is not in Initialized state", async function () {
             const amount1 = hre.ethers.utils.parseEther("20");
             await treasuryRebalance.finalizeRegistration();
-            await expect(treasuryRebalance.registerReceiver(receiverAddress, amount1)).to.be.revertedWith(
+            await expect(treasuryRebalance.registerNewbie(newbieAddress, amount1)).to.be.revertedWith(
                 "function not allowed at this stage"
             );
         });
 
         it("Should revert if the amount is set to 0", async function () {
-            await expect(treasuryRebalance.registerReceiver(receiverAddress, 0)).to.be.revertedWith(
+            await expect(treasuryRebalance.registerNewbie(newbieAddress, 0)).to.be.revertedWith(
                 "Amount cannot be set to 0"
             );
         });
     });
 
-    describe("removeReceiver", function () {
-        let receiverAddress;
+    describe("removeNewbie", function () {
+        let newbieAddress;
         let amount;
 
         beforeEach(async function () {
-            receiverAddress = receiver1.address;
+            newbieAddress = newbie1.address;
             amount = hre.ethers.utils.parseEther("20");
-            await treasuryRebalance.registerReceiver(receiverAddress, amount);
+            await treasuryRebalance.registerNewbie(newbieAddress, amount);
         });
 
-        it("Should remove receiver", async function () {
-            await treasuryRebalance.removeReceiver(receiverAddress);
-            expect(await treasuryRebalance.getReceiverCount()).to.equal(0);
+        it("Should remove newbie", async function () {
+            await treasuryRebalance.removeNewbie(newbieAddress);
+            expect(await treasuryRebalance.getNewbieCount()).to.equal(0);
             expect(await treasuryRebalance.getTreasuryAmount()).to.equal(0);
-            await expect(treasuryRebalance.getReceiver(receiverAddress)).to.be.revertedWith("Receiver does not exist");
+            await expect(treasuryRebalance.getNewbie(newbieAddress)).to.be.revertedWith("Newbie does not exist");
         });
 
-        it("Should emit RemoveReceiver event", async function () {
-            await expect(treasuryRebalance.removeReceiver(receiverAddress))
-                .to.emit(treasuryRebalance, "RemoveReceiver")
-                .withArgs(receiverAddress, 0);
+        it("Should emit RemoveNewbie event", async function () {
+            await expect(treasuryRebalance.removeNewbie(newbieAddress))
+                .to.emit(treasuryRebalance, "RemoveNewbie")
+                .withArgs(newbieAddress, 0);
         });
 
-        it("Should not remove unregistered receiver", async function () {
-            await expect(treasuryRebalance.removeReceiver(receiver2.address)).to.be.revertedWith(
-                "Receiver does not exist"
-            );
+        it("Should not remove unregistered newbie", async function () {
+            await expect(treasuryRebalance.removeNewbie(newbie2.address)).to.be.revertedWith("Newbie does not exist");
         });
 
-        it("Should not allow non-owner to remove a receiver", async function () {
-            await expect(treasuryRebalance.connect(account1).removeReceiver(receiverAddress)).to.be.revertedWith(
+        it("Should not allow non-owner to remove a newbie", async function () {
+            await expect(treasuryRebalance.connect(account1).removeNewbie(newbieAddress)).to.be.revertedWith(
                 "Ownable: caller is not the owner"
             );
         });
 
-        it("Should not remove receiver when contract is not in Initialized state", async function () {
+        it("Should not remove newbie when contract is not in Initialized state", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await expect(treasuryRebalance.removeReceiver(receiverAddress)).to.be.revertedWith(
+            await expect(treasuryRebalance.removeNewbie(newbieAddress)).to.be.revertedWith(
                 "function not allowed at this stage"
             );
         });
@@ -224,63 +224,63 @@ describe("TreasuryRebalance", function () {
 
     describe("approve", function () {
         beforeEach(async function () {
-            await treasuryRebalance.registerSender(sender1);
-            await treasuryRebalance.registerSender(sender2);
-            await treasuryRebalance.registerSender(owner.address);
-            await treasuryRebalance.registerSender(receiver1.address);
-            await treasuryRebalance.registerSender(treasuryRebalance.address);
+            await treasuryRebalance.registerRetired(retired1);
+            await treasuryRebalance.registerRetired(retired2);
+            await treasuryRebalance.registerRetired(owner.address);
+            await treasuryRebalance.registerRetired(newbie1.address);
+            await treasuryRebalance.registerRetired(treasuryRebalance.address);
             await treasuryRebalance.finalizeRegistration();
         });
 
-        it("Should approve sender if msg.sender is admin of sender contract", async function () {
-            const sender = await treasuryRebalance.getSender(sender1);
-            expect(sender[1].length).to.equal(0);
-            const tx = await treasuryRebalance.approve(sender1);
-            await treasuryRebalance.approve(sender2);
+        it("Should approve retired if msg.sender is admin of retired contract", async function () {
+            const retired = await treasuryRebalance.getRetired(retired1);
+            expect(retired[1].length).to.equal(0);
+            const tx = await treasuryRebalance.approve(retired1);
+            await treasuryRebalance.approve(retired2);
 
-            const updatedSenderDetails = await treasuryRebalance.getSender(sender1);
-            expect(updatedSenderDetails[1][0]).to.equal(owner.address);
+            const updatedRetiredDetails = await treasuryRebalance.getRetired(retired1);
+            expect(updatedRetiredDetails[1][0]).to.equal(owner.address);
 
-            await expect(tx).to.emit(treasuryRebalance, "Approve").withArgs(sender1, owner.address, 1);
+            await expect(tx).to.emit(treasuryRebalance, "Approve").withArgs(retired1, owner.address, 1);
         });
 
-        it("Should approve senderAddress is the msg.sender if sender is a EOA", async function () {
+        it("Should approve retiredAddress is the msg.sender if retired is a EOA", async function () {
             await treasuryRebalance.approve(owner.address);
-            const sender = await treasuryRebalance.getSender(owner.address);
-            expect(sender[1][0]).to.equal(owner.address);
+            const retired = await treasuryRebalance.getRetired(owner.address);
+            expect(retired[1][0]).to.equal(owner.address);
         });
 
-        it("Should revert if sender is already approved", async function () {
-            await treasuryRebalance.approve(sender1);
-            await expect(treasuryRebalance.approve(sender1)).to.be.revertedWith(
+        it("Should revert if retired is already approved", async function () {
+            await treasuryRebalance.approve(retired1);
+            await expect(treasuryRebalance.approve(retired1)).to.be.revertedWith(
                 "Duplicate approvers cannot be allowed"
             );
         });
 
-        it("Should revert if sender is not registered", async function () {
-            // try to approve unregistered sender
-            await expect(treasuryRebalance.approve(receiver2.address)).to.be.revertedWith(
-                "sender needs to be registered before approval"
+        it("Should revert if retired is not registered", async function () {
+            // try to approve unregistered retired
+            await expect(treasuryRebalance.approve(newbie2.address)).to.be.revertedWith(
+                "retired needs to be registered before approval"
             );
         });
 
-        it("Should revert if sender is a EOA and if msg.sender is not the admin", async function () {
-            await expect(treasuryRebalance.approve(receiver1.address)).to.be.revertedWith(
-                "senderAddress is not the msg.sender"
+        it("Should revert if retired is a EOA and if msg.sender is not the admin", async function () {
+            await expect(treasuryRebalance.approve(newbie1.address)).to.be.revertedWith(
+                "retiredAddress is not the msg.sender"
             );
         });
 
-        it("Should revert if sender is a contract address but does not have getState() method", async function () {
+        it("Should revert if retired is a contract address but does not have getState() method", async function () {
             await expect(treasuryRebalance.approve(treasuryRebalance.address)).to.be.revertedWith("call failed");
         });
 
-        it("Should revert if sender is a contract but adminList is empty", async function () {
+        it("Should revert if retired is a contract but adminList is empty", async function () {
             await kgf.emptyAdminList();
-            await expect(treasuryRebalance.approve(sender1)).to.be.revertedWith("admin list cannot be empty");
+            await expect(treasuryRebalance.approve(retired1)).to.be.revertedWith("admin list cannot be empty");
         });
 
-        it("Should not approve if sender is a contract but msg.sender is not the admin", async function () {
-            await expect(treasuryRebalance.connect(account1).approve(sender1)).to.be.revertedWith(
+        it("Should not approve if retired is a contract but msg.sender is not the admin", async function () {
+            await expect(treasuryRebalance.connect(account1).approve(retired1)).to.be.revertedWith(
                 "msg.sender is not the admin"
             );
         });
@@ -291,8 +291,8 @@ describe("TreasuryRebalance", function () {
 
         beforeEach(async function () {
             initialStatus = await treasuryRebalance.status();
-            await treasuryRebalance.registerSender(sender1);
-            await treasuryRebalance.registerSender(sender2);
+            await treasuryRebalance.registerRetired(retired1);
+            await treasuryRebalance.registerRetired(retired2);
         });
 
         it("Should set status to Registered", async function () {
@@ -303,20 +303,20 @@ describe("TreasuryRebalance", function () {
 
         it("Should set status to Approved", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await treasuryRebalance.approve(sender1);
-            await treasuryRebalance.approve(sender2);
+            await treasuryRebalance.approve(retired1);
+            await treasuryRebalance.approve(retired2);
             await treasuryRebalance.finalizeApproval();
             expect(await treasuryRebalance.status()).to.equal(2);
         });
 
-        it("Should not set status to Approved when treasury amount exceeds balance of senders", async function () {
+        it("Should not set status to Approved when treasury amount exceeds balance of retirees", async function () {
             const amount = hre.ethers.utils.parseEther("50");
-            await treasuryRebalance.registerReceiver(receiver1.address, amount);
+            await treasuryRebalance.registerNewbie(newbie1.address, amount);
             await treasuryRebalance.finalizeRegistration();
-            await treasuryRebalance.approve(sender1);
-            await treasuryRebalance.approve(sender2);
+            await treasuryRebalance.approve(retired1);
+            await treasuryRebalance.approve(retired2);
             await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
-                "treasury amount should be less than the sum of all sender address balances"
+                "treasury amount should be less than the sum of all retired address balances"
             );
         });
 
@@ -340,8 +340,8 @@ describe("TreasuryRebalance", function () {
 
         it("Should revert if owner tries to set Registered after Approved", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await treasuryRebalance.approve(sender1);
-            await treasuryRebalance.approve(sender2);
+            await treasuryRebalance.approve(retired1);
+            await treasuryRebalance.approve(retired2);
             await treasuryRebalance.finalizeApproval();
             await expect(treasuryRebalance.finalizeRegistration()).to.be.revertedWith(
                 "function not allowed at this stage"
@@ -350,8 +350,8 @@ describe("TreasuryRebalance", function () {
 
         it("Should emit SetStatus event", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await treasuryRebalance.approve(sender1);
-            await treasuryRebalance.approve(sender2);
+            await treasuryRebalance.approve(retired1);
+            await treasuryRebalance.approve(retired2);
             await expect(treasuryRebalance.finalizeApproval()).to.emit(treasuryRebalance, "SetStatus").withArgs(2);
         });
 
@@ -365,27 +365,27 @@ describe("TreasuryRebalance", function () {
 
             it("Should revert if approved admin change during the contract ", async function () {
                 await treasuryRebalance.finalizeRegistration();
-                await treasuryRebalance.approve(sender1);
-                await treasuryRebalance.approve(sender2);
+                await treasuryRebalance.approve(retired1);
+                await treasuryRebalance.approve(retired2);
                 await kgf.addAdmin(account1.address);
                 await kgf.changeMinReq(2);
                 await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
                     "min required admins should approve"
                 );
 
-                await treasuryRebalance.connect(account1).approve(sender1);
+                await treasuryRebalance.connect(account1).approve(retired1);
                 await treasuryRebalance.finalizeApproval();
             });
 
             it("Should revert if approved admin change during the contract ", async function () {
                 await treasuryRebalance.finalizeRegistration();
-                await treasuryRebalance.approve(sender1);
+                await treasuryRebalance.approve(retired1);
                 await kgf.changeMinReq(2);
                 await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
                     "min required admins should approve"
                 );
 
-                await expect(treasuryRebalance.connect(account1).approve(sender1), "msg.sender is not the admin");
+                await expect(treasuryRebalance.connect(account1).approve(retired1), "msg.sender is not the admin");
             });
         });
     });
@@ -394,11 +394,11 @@ describe("TreasuryRebalance", function () {
         const memo = "Treasury Fund Rebalancing successfull";
 
         beforeEach(async function () {
-            await treasuryRebalance.registerSender(sender1);
-            await treasuryRebalance.registerSender(sender2);
+            await treasuryRebalance.registerRetired(retired1);
+            await treasuryRebalance.registerRetired(retired2);
             await treasuryRebalance.finalizeRegistration();
-            await treasuryRebalance.approve(sender1);
-            await treasuryRebalance.approve(sender2);
+            await treasuryRebalance.approve(retired1);
+            await treasuryRebalance.approve(retired2);
         });
 
         it("should set the memo and status to Finalized", async function () {
@@ -436,8 +436,8 @@ describe("TreasuryRebalance", function () {
 
         it("should reset all storage values to 0 at Initialize state", async function () {
             await treasuryRebalance.reset();
-            expect(await treasuryRebalance.getSenderCount()).to.equal(0);
-            expect(await treasuryRebalance.getReceiverCount()).to.equal(0);
+            expect(await treasuryRebalance.getRetiredCount()).to.equal(0);
+            expect(await treasuryRebalance.getNewbieCount()).to.equal(0);
             expect(await treasuryRebalance.getTreasuryAmount()).to.equal(0);
             expect(await treasuryRebalance.memo()).to.equal("");
             expect(await treasuryRebalance.status()).to.equal(0);
@@ -446,17 +446,17 @@ describe("TreasuryRebalance", function () {
 
         it("should reset all storage values to 0 at Registered state", async function () {
             const amount = hre.ethers.utils.parseEther("50");
-            await treasuryRebalance.registerSender(sender1);
-            await treasuryRebalance.registerSender(sender2);
+            await treasuryRebalance.registerRetired(retired1);
+            await treasuryRebalance.registerRetired(retired2);
 
-            await treasuryRebalance.registerReceiver(receiver1.address, amount);
+            await treasuryRebalance.registerNewbie(newbie1.address, amount);
             await treasuryRebalance.finalizeRegistration();
-            expect(await treasuryRebalance.getSenderCount()).to.equal(2);
-            expect(await treasuryRebalance.getReceiverCount()).to.equal(1);
+            expect(await treasuryRebalance.getRetiredCount()).to.equal(2);
+            expect(await treasuryRebalance.getNewbieCount()).to.equal(1);
 
             await treasuryRebalance.reset();
-            expect(await treasuryRebalance.getSenderCount()).to.equal(0);
-            expect(await treasuryRebalance.getReceiverCount()).to.equal(0);
+            expect(await treasuryRebalance.getRetiredCount()).to.equal(0);
+            expect(await treasuryRebalance.getNewbieCount()).to.equal(0);
             expect(await treasuryRebalance.getTreasuryAmount()).to.equal(0);
             expect(await treasuryRebalance.memo()).to.equal("");
             expect(await treasuryRebalance.status()).to.equal(0);
@@ -465,20 +465,20 @@ describe("TreasuryRebalance", function () {
 
         it("should reset all storage values to 0 at Approved state", async function () {
             const amount = hre.ethers.utils.parseEther("10");
-            await treasuryRebalance.registerSender(sender1);
-            await treasuryRebalance.registerReceiver(receiver1.address, amount);
+            await treasuryRebalance.registerRetired(retired1);
+            await treasuryRebalance.registerNewbie(newbie1.address, amount);
             await treasuryRebalance.finalizeRegistration();
 
-            await treasuryRebalance.approve(sender1);
+            await treasuryRebalance.approve(retired1);
             await treasuryRebalance.finalizeApproval();
             expect(await treasuryRebalance.status()).to.equal(2);
 
-            expect(await treasuryRebalance.getSenderCount()).to.equal(1);
-            expect(await treasuryRebalance.getReceiverCount()).to.equal(1);
+            expect(await treasuryRebalance.getRetiredCount()).to.equal(1);
+            expect(await treasuryRebalance.getNewbieCount()).to.equal(1);
 
             await treasuryRebalance.reset();
-            expect(await treasuryRebalance.getSenderCount()).to.equal(0);
-            expect(await treasuryRebalance.getReceiverCount()).to.equal(0);
+            expect(await treasuryRebalance.getRetiredCount()).to.equal(0);
+            expect(await treasuryRebalance.getNewbieCount()).to.equal(0);
             expect(await treasuryRebalance.getTreasuryAmount()).to.equal(0);
             expect(await treasuryRebalance.memo()).to.equal("");
             expect(await treasuryRebalance.status()).to.equal(0);
@@ -487,17 +487,17 @@ describe("TreasuryRebalance", function () {
 
         it("should revert when tried to reset after finalization", async function () {
             const amount = hre.ethers.utils.parseEther("10");
-            await treasuryRebalance.registerSender(sender1);
-            await treasuryRebalance.registerReceiver(receiver1.address, amount);
+            await treasuryRebalance.registerRetired(retired1);
+            await treasuryRebalance.registerNewbie(newbie1.address, amount);
             await treasuryRebalance.finalizeRegistration();
 
-            await treasuryRebalance.approve(sender1);
+            await treasuryRebalance.approve(retired1);
             await treasuryRebalance.finalizeApproval();
             await treasuryRebalance.finalizeContract("memo");
             expect(await treasuryRebalance.status()).to.equal(3);
 
-            expect(await treasuryRebalance.getSenderCount()).to.equal(1);
-            expect(await treasuryRebalance.getReceiverCount()).to.equal(1);
+            expect(await treasuryRebalance.getRetiredCount()).to.equal(1);
+            expect(await treasuryRebalance.getNewbieCount()).to.equal(1);
 
             await expect(treasuryRebalance.reset()).to.be.revertedWith("Contract is finalized, cannot reset values");
         });
