@@ -6,7 +6,7 @@ describe("TreasuryRebalance", function () {
     let currentBlock, executionBlock;
 
     beforeEach(async function () {
-        [owner, account1, account2, receiver1, receiver2] = await ethers.getSigners();
+        [owner, account1, receiver1, receiver2] = await ethers.getSigners();
         currentBlock = await ethers.provider.getBlockNumber();
         executionBlock = currentBlock + 40;
 
