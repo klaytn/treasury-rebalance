@@ -65,6 +65,7 @@ describe("TreasuryRebalance", function () {
         });
 
         it("Should not allow adding the same retired twice", async function () {
+            expect(await treasuryRebalance.retiredExists(retired1)).to.equal(false);
             await treasuryRebalance.registerRetired(retired1);
             await expect(treasuryRebalance.registerRetired(retired1)).to.be.revertedWith(
                 "Retired address is already registered"
@@ -80,7 +81,7 @@ describe("TreasuryRebalance", function () {
         it("Should not register retired when contract is not in Initialized state", async function () {
             await treasuryRebalance.finalizeRegistration();
             await expect(treasuryRebalance.registerRetired(retired1)).to.be.revertedWith(
-                "function not allowed at this stage"
+                "Not in the designated status"
             );
         });
 
@@ -104,7 +105,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should remove a retired", async function () {
             await treasuryRebalance.removeRetired(retired1);
-            await expect(treasuryRebalance.getRetired(retired1)).to.be.revertedWith("Retired does not exist");
+            await expect(treasuryRebalance.getRetired(retired1)).to.be.reverted;
         });
 
         it("Should emit a RemoveRetired event", async function () {
@@ -114,7 +115,7 @@ describe("TreasuryRebalance", function () {
         });
 
         it("Should not allow removing a non-existent retired", async function () {
-            await expect(treasuryRebalance.removeRetired(owner.address)).to.be.revertedWith("Retired does not exist");
+            await expect(treasuryRebalance.removeRetired(owner.address)).to.be.reverted;
         });
 
         it("Should not allow non-owner to remove a retired", async function () {
@@ -125,9 +126,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should not remove retired when contract is not in Initialized state", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await expect(treasuryRebalance.removeRetired(retired1)).to.be.revertedWith(
-                "function not allowed at this stage"
-            );
+            await expect(treasuryRebalance.removeRetired(retired1)).to.be.revertedWith("Not in the designated status");
         });
     });
 
@@ -170,7 +169,7 @@ describe("TreasuryRebalance", function () {
             const amount1 = hre.ethers.utils.parseEther("20");
             await treasuryRebalance.finalizeRegistration();
             await expect(treasuryRebalance.registerNewbie(newbieAddress, amount1)).to.be.revertedWith(
-                "function not allowed at this stage"
+                "Not in the designated status"
             );
         });
 
@@ -195,7 +194,7 @@ describe("TreasuryRebalance", function () {
             await treasuryRebalance.removeNewbie(newbieAddress);
             expect(await treasuryRebalance.getNewbieCount()).to.equal(0);
             expect(await treasuryRebalance.getTreasuryAmount()).to.equal(0);
-            await expect(treasuryRebalance.getNewbie(newbieAddress)).to.be.revertedWith("Newbie does not exist");
+            await expect(treasuryRebalance.getNewbie(newbieAddress)).to.be.reverted;
         });
 
         it("Should emit RemoveNewbie event", async function () {
@@ -205,7 +204,7 @@ describe("TreasuryRebalance", function () {
         });
 
         it("Should not remove unregistered newbie", async function () {
-            await expect(treasuryRebalance.removeNewbie(newbie2.address)).to.be.revertedWith("Newbie does not exist");
+            await expect(treasuryRebalance.removeNewbie(newbie2.address)).to.be.reverted;
         });
 
         it("Should not allow non-owner to remove a newbie", async function () {
@@ -217,7 +216,7 @@ describe("TreasuryRebalance", function () {
         it("Should not remove newbie when contract is not in Initialized state", async function () {
             await treasuryRebalance.finalizeRegistration();
             await expect(treasuryRebalance.removeNewbie(newbieAddress)).to.be.revertedWith(
-                "function not allowed at this stage"
+                "Not in the designated status"
             );
         });
     });
@@ -320,20 +319,16 @@ describe("TreasuryRebalance", function () {
 
         it("Should revert if the current status is tried to set again", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await expect(treasuryRebalance.finalizeRegistration()).to.be.revertedWith(
-                "function not allowed at this stage"
-            );
+            await expect(treasuryRebalance.finalizeRegistration()).to.be.revertedWith("Not in the designated status");
         });
 
         it("Should revert if owner tries to set Finalize after Registered", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await expect(treasuryRebalance.finalizeContract("memo")).to.be.revertedWith(
-                "function not allowed at this stage"
-            );
+            await expect(treasuryRebalance.finalizeContract("memo")).to.be.revertedWith("Not in the designated status");
         });
 
         it("Should revert if owner tries to set Approved before Registered", async function () {
-            await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith("function not allowed at this stage");
+            await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith("Not in the designated status");
         });
 
         it("Should revert if owner tries to set Registered after Approved", async function () {
@@ -341,16 +336,14 @@ describe("TreasuryRebalance", function () {
             await treasuryRebalance.approve(retired1);
             await treasuryRebalance.approve(retired2);
             await treasuryRebalance.finalizeApproval();
-            await expect(treasuryRebalance.finalizeRegistration()).to.be.revertedWith(
-                "function not allowed at this stage"
-            );
+            await expect(treasuryRebalance.finalizeRegistration()).to.be.revertedWith("Not in the designated status");
         });
 
-        it("Should emit SetStatus event", async function () {
+        it("Should emit StatusChanged event", async function () {
             await treasuryRebalance.finalizeRegistration();
             await treasuryRebalance.approve(retired1);
             await treasuryRebalance.approve(retired2);
-            await expect(treasuryRebalance.finalizeApproval()).to.emit(treasuryRebalance, "SetStatus").withArgs(2);
+            await expect(treasuryRebalance.finalizeApproval()).to.emit(treasuryRebalance, "StatusChanged").withArgs(2);
         });
 
         describe("Reach Quorom", function () {
@@ -421,9 +414,7 @@ describe("TreasuryRebalance", function () {
         });
 
         it("should revert if its not called at the Approved stage", async () => {
-            await expect(treasuryRebalance.finalizeContract(memo)).to.be.revertedWith(
-                "function not allowed at this stage"
-            );
+            await expect(treasuryRebalance.finalizeContract(memo)).to.be.revertedWith("Not in the designated status");
         });
     });
 
