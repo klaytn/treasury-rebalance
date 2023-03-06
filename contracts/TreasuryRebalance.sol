@@ -106,6 +106,7 @@ contract TreasuryRebalance is Ownable {
         address _retiredAddress
     ) public onlyOwner onlyAtStatus(Status.Initialized) {
         uint256 retiredIndex = getRetiredIndex(_retiredAddress);
+        require(retiredIndex != type(uint256).max, "Retired not registered");
         retirees[retiredIndex] = retirees[retirees.length - 1];
         retirees.pop();
 
@@ -141,6 +142,7 @@ contract TreasuryRebalance is Ownable {
         address _newbieAddress
     ) public onlyOwner onlyAtStatus(Status.Initialized) {
         uint256 newbieIndex = getNewbieIndex(_newbieAddress);
+        require(newbieIndex != type(uint256).max, "Newbie not registered");
         newbies[newbieIndex] = newbies[newbies.length - 1];
         newbies.pop();
 
@@ -192,7 +194,7 @@ contract TreasuryRebalance is Ownable {
     function _validateAdmin(
         address _approver,
         address[] memory adminList
-    ) private returns (bool isAdmin) {
+    ) private pure returns (bool isAdmin) {
         for (uint256 i = 0; i < adminList.length; i++) {
             if (_approver == adminList[i]) {
                 isAdmin = true;
@@ -230,6 +232,7 @@ contract TreasuryRebalance is Ownable {
         address _approver
     ) private {
         uint256 index = getRetiredIndex(_retiredAddress);
+        require(index != type(uint256).max, "Retired not registered");
         address[] memory approvers = retirees[index].approvers;
         for (uint256 i = 0; i < approvers.length; i++) {
             require(approvers[i] != _approver, "Already approved");
@@ -311,12 +314,19 @@ contract TreasuryRebalance is Ownable {
         public
         onlyOwner
         onlyAtStatus(Status.Approved)
-        returns (address[] memory retirees, address[] memory newbies)
+        returns (
+            address[] memory retirees,
+            uint256 totalRetireesBalance,
+            address[] memory newbies,
+            uint256 totalNewbiesFund
+        )
     {
         memo = _memo;
         status = Status.Finalized;
         emit Finalized(memo, status);
-        return (retirees, newbies);
+        totalRetireesBalance = sumOfRetiredBalance();
+        totalNewbiesFund = getTreasuryAmount();
+        return (retirees, totalRetireesBalance, newbies, totalNewbiesFund);
     }
 
     /**
@@ -346,6 +356,7 @@ contract TreasuryRebalance is Ownable {
         address _retiredAddress
     ) public view returns (address, address[] memory) {
         uint256 index = getRetiredIndex(_retiredAddress);
+        require(index != type(uint256).max, "Retired not registered");
         Retired memory retired = retirees[index];
         return (retired.retired, retired.approvers);
     }
@@ -403,6 +414,7 @@ contract TreasuryRebalance is Ownable {
         address _newbieAddress
     ) public view returns (address, uint256) {
         uint256 index = getNewbieIndex(_newbieAddress);
+        require(index != type(uint256).max, "Newbie not registered");
         Newbie memory newbie = newbies[index];
         return (newbie.newbie, newbie.amount);
     }

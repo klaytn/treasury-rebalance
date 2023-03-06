@@ -105,7 +105,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should remove a retired", async function () {
             await treasuryRebalance.removeRetired(retired1);
-            await expect(treasuryRebalance.getRetired(retired1)).to.be.reverted;
+            await expect(treasuryRebalance.getRetired(retired1)).to.be.revertedWith("Retired not registered");
         });
 
         it("Should emit a RemoveRetired event", async function () {
@@ -194,7 +194,7 @@ describe("TreasuryRebalance", function () {
             await treasuryRebalance.removeNewbie(newbieAddress);
             expect(await treasuryRebalance.getNewbieCount()).to.equal(0);
             expect(await treasuryRebalance.getTreasuryAmount()).to.equal(0);
-            await expect(treasuryRebalance.getNewbie(newbieAddress)).to.be.reverted;
+            await expect(treasuryRebalance.getNewbie(newbieAddress)).to.be.revertedWith("Newbie not registered");
         });
 
         it("Should emit RemoveNewbie event", async function () {
