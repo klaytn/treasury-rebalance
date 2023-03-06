@@ -307,6 +307,10 @@ contract TreasuryRebalance is Ownable {
      * @dev sets the status of the contract to Finalize. Once finalized the storage data
      * of the contract cannot be modified
      * @param _memo is the result of the rebalance after executing successfully in the core.
+     * @return retirees is an array of retired address
+     * @return totalRetireesBalance is the sum of all retired balances
+     * @return newbies is an array of newbie address
+     * @return totalNewbiesFund is the sum of funds allocated to
      */
     function finalizeContract(
         string memory _memo
