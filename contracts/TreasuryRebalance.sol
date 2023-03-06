@@ -8,7 +8,10 @@ import "./Ownable.sol";
  * @title Interface to get adminlist and quorom
  */
 interface IRetiredContract {
-    function getState() external view returns (address[] memory adminList, uint256 quorom);
+    function getState()
+        external
+        view
+        returns (address[] memory adminList, uint256 quorom);
 }
 
 /**
@@ -217,8 +220,8 @@ contract TreasuryRebalance is Ownable {
     function _getState(
         address _retiredAddress
     ) private view returns (address[] memory adminList, uint256 req) {
-        IRetiredContract retiredContract =  IRetiredContract(_retiredAddress);
-       (adminList, req) = retiredContract.getState();
+        IRetiredContract retiredContract = IRetiredContract(_retiredAddress);
+        (adminList, req) = retiredContract.getState();
     }
 
     /**
