@@ -1,0 +1,48 @@
+{
+  "name": "kgp-6",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "npm run lint:js && npm run lint:sol",
+    "lint:fix": "npm run lint:js:fix && npm run lint:sol:fix",
+    "lint:js": "eslint --ignore-path .gitignore .",
+    "lint:js:fix": "eslint --ignore-path .gitignore . --fix && npm run lint:js:tidy",
+    "lint:sol": "solhint 'contracts/*.sol' && prettier -c 'contracts/*.sol'",
+    "lint:sol:fix": "prettier --write \"contracts/*.sol\"",
+    "lint:js:tidy": "prettier --write ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toniya-klaytn/kgp-6.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/toniya-klaytn/kgp-6/issues"
+  },
+  "homepage": "https://github.com/toniya-klaytn/kgp-6#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.1",
+    "eslint": "^8.34.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-n": "^15.2.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-promise": "^6.0.0",
+    "hardhat": "^2.12.7",
+    "prettier": "^2.8.4",
+    "prettier-plugin-solidity": "^1.1.2",
+    "solhint": "^3.4.0",
+    "solidity-coverage": "^0.8.2"
+  },
+  "dependencies": {
+    "@klaytn/contracts": "^1.0.6",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "dotenv": "^16.0.3"
+  }
+}

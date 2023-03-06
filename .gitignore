@@ -1,0 +1,4 @@
+node_modules
+artifacts/
+cache/solidity-files-cache.json
+.env
