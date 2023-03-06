@@ -2,7 +2,7 @@ const {expect} = require("chai");
 const {ethers} = require("hardhat");
 
 describe("TreasuryRebalance", function () {
-    let TreasuryRebalance, treasuryRebalance, kgf, kir, owner, retired1, retired2, newbie1, newbie2;
+    let TreasuryRebalance, treasuryRebalance, kgf, kir, test, owner, retired1, retired2, newbie1, newbie2;
     let currentBlock, executionBlock;
 
     beforeEach(async function () {
@@ -19,6 +19,9 @@ describe("TreasuryRebalance", function () {
         const KIR = await ethers.getContractFactory("SenderTest2");
         kir = await KIR.deploy();
         retired2 = kir.address;
+
+        const TEST = await ethers.getContractFactory("Ownable");
+        test = await TEST.deploy();
 
         // Send some funds to retired1 to simulate KFG funds
         await owner.sendTransaction({to: retired1, value: hre.ethers.utils.parseEther("20")});
@@ -227,7 +230,7 @@ describe("TreasuryRebalance", function () {
             await treasuryRebalance.registerRetired(retired2);
             await treasuryRebalance.registerRetired(owner.address);
             await treasuryRebalance.registerRetired(newbie1.address);
-            await treasuryRebalance.registerRetired(treasuryRebalance.address);
+            await treasuryRebalance.registerRetired(test.address);
             await treasuryRebalance.finalizeRegistration();
         });
 
@@ -268,7 +271,7 @@ describe("TreasuryRebalance", function () {
         });
 
         it("Should revert if retired is a contract address but does not have getState() method", async function () {
-            await expect(treasuryRebalance.approve(treasuryRebalance.address)).to.be.revertedWith("call failed");
+            await expect(treasuryRebalance.approve(test.address)).to.be.reverted;
         });
 
         it("Should revert if retired is a contract but adminList is empty", async function () {

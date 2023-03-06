@@ -5,6 +5,13 @@ pragma solidity ^0.8.0;
 import "./Ownable.sol";
 
 /**
+ * @title Interface to get adminlist and quorom
+ */
+interface IRetiredContract {
+    function getState() external view returns (address[] memory adminList, uint256 quorom);
+}
+
+/**
  * @title Smart contract to record the rebalance of treasury funds.
  * This contract is to mainly record the addresses which holds the treasury funds
  * before and after rebalancing. It facilates approval and redistributing to new addresses.
@@ -58,7 +65,6 @@ contract TreasuryRebalance is Ownable {
     event RetiredRemoved(address retired, uint256 retiredCount);
     event NewbieRegistered(address newbie, uint256 fundAllocation);
     event NewbieRemoved(address newbie, uint256 newbieCount);
-    event RetiredAddrAdminStatus(bool success, bytes result);
     event Approved(address retired, address approver, uint256 approversCount);
     event StatusChanged(Status status);
     event Finalized(string memo, Status status);
@@ -210,16 +216,9 @@ contract TreasuryRebalance is Ownable {
      */
     function _getState(
         address _retiredAddress
-    ) private returns (address[] memory adminList, uint256 req) {
-        //call getState() function in retiredAddress contract to get the adminList
-        bytes memory payload = abi.encodeWithSignature("getState()");
-        (bool success, bytes memory result) = _retiredAddress.staticcall(
-            payload
-        );
-        emit RetiredAddrAdminStatus(success, result);
-        require(success, "call failed");
-
-        (adminList, req) = abi.decode(result, (address[], uint256));
+    ) private view returns (address[] memory adminList, uint256 req) {
+        IRetiredContract retiredContract =  IRetiredContract(_retiredAddress);
+       (adminList, req) = retiredContract.getState();
     }
 
     /**
@@ -279,7 +278,7 @@ contract TreasuryRebalance is Ownable {
     /**
      * @dev verify if quorom reached for the retired approvals
      */
-    function _isRetiredsApproved() private {
+    function _isRetiredsApproved() private view {
         for (uint256 i = 0; i < retirees.length; i++) {
             Retired memory retired = retirees[i];
             (address[] memory adminList, uint256 req) = _getState(
