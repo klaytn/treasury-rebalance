@@ -64,7 +64,7 @@ describe("TreasuryRebalance", function () {
         it("Should emit a RegisterRetired event", async function () {
             await expect(treasuryRebalance.registerRetired(retired1))
                 .to.emit(treasuryRebalance, "RetiredRegistered")
-                .withArgs(retired1, []);
+                .withArgs(retired1);
         });
 
         it("Should not allow adding the same retired twice", async function () {
