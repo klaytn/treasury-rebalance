@@ -397,6 +397,7 @@ describe("TreasuryRebalance", function () {
 
         it("should set the memo and status to Finalized", async function () {
             await treasuryRebalance.finalizeApproval();
+            await hre.network.provider.send("hardhat_mine", ["0x32"]);
             await treasuryRebalance.finalizeContract(memo);
             expect(await treasuryRebalance.memo()).to.equal(memo);
             expect(await treasuryRebalance.status()).to.equal(3);
@@ -404,6 +405,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should emit Finalize event", async function () {
             await treasuryRebalance.finalizeApproval();
+            await hre.network.provider.send("hardhat_mine", ["0x32"]);
             await expect(treasuryRebalance.finalizeContract(memo))
                 .to.emit(treasuryRebalance, "Finalized")
                 .withArgs(memo, 3);
@@ -485,6 +487,7 @@ describe("TreasuryRebalance", function () {
 
             await treasuryRebalance.approve(retired1);
             await treasuryRebalance.finalizeApproval();
+            await hre.network.provider.send("hardhat_mine", ["0x32"]);
             await treasuryRebalance.finalizeContract("memo");
             expect(await treasuryRebalance.status()).to.equal(3);
 
