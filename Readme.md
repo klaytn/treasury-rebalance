@@ -1,6 +1,6 @@
 # Treasury Rebalance
 
-Refer to KIP-
+Implementation of KIP-103
 
 Try running some of the following tasks:
 
