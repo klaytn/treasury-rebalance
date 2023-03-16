@@ -114,7 +114,7 @@ describe("TreasuryRebalance", function () {
         it("Should emit a RemoveRetired event", async function () {
             await expect(treasuryRebalance.removeRetired(retired1))
                 .to.emit(treasuryRebalance, "RetiredRemoved")
-                .withArgs(retired1, 0);
+                .withArgs(retired1);
         });
 
         it("Should not allow removing a non-existent retired", async function () {
@@ -203,7 +203,7 @@ describe("TreasuryRebalance", function () {
         it("Should emit RemoveNewbie event", async function () {
             await expect(treasuryRebalance.removeNewbie(newbieAddress))
                 .to.emit(treasuryRebalance, "NewbieRemoved")
-                .withArgs(newbieAddress, 0);
+                .withArgs(newbieAddress);
         });
 
         it("Should not remove unregistered newbie", async function () {
@@ -500,6 +500,55 @@ describe("TreasuryRebalance", function () {
         it("should revert when tried to reset after it passes the execution block", async function () {
             await hre.network.provider.send("hardhat_mine", ["0x32"]);
             await expect(treasuryRebalance.reset()).to.be.revertedWith("Contract is finalized, cannot reset values");
+        });
+    });
+
+    describe("snapshot", function () {
+        const amount = hre.ethers.utils.parseEther("10");
+        const retireesBalance = hre.ethers.utils.parseEther("40");
+
+        beforeEach(async function () {
+            await treasuryRebalance.registerRetired(retired1);
+            await treasuryRebalance.registerRetired(retired2);
+            await treasuryRebalance.registerNewbie(newbie1.address, amount);
+        });
+
+        it("snaphot at Registered state", async function () {
+            await treasuryRebalance.finalizeRegistration();
+            const snapshot = await treasuryRebalance.getSnapshot();
+            expect(snapshot._retirees[0].retired).to.equal(retired1);
+            expect(snapshot._retirees[1].retired).to.equal(retired2);
+            expect(snapshot._totalRetireesBalance).to.equal(retireesBalance);
+            expect(snapshot._totalNewbiesFund).to.equal(amount);
+            expect(snapshot._status).to.equal(1);
+        });
+
+        it("snaphot at Approved state", async function () {
+            await treasuryRebalance.finalizeRegistration();
+            await treasuryRebalance.approve(retired1);
+            await treasuryRebalance.approve(retired2);
+            await treasuryRebalance.finalizeApproval();
+            const snapshot = await treasuryRebalance.getSnapshot();
+            expect(snapshot._retirees[0].approvers[0]).to.equal(owner.address);
+            expect(snapshot._retirees[1].approvers[0]).to.equal(owner.address);
+            expect(snapshot._totalRetireesBalance).to.equal(retireesBalance);
+            expect(snapshot._totalNewbiesFund).to.equal(amount);
+            expect(snapshot._status).to.equal(2);
+        });
+
+        it("snaphot at Finalized state", async function () {
+            await treasuryRebalance.finalizeRegistration();
+            await treasuryRebalance.approve(retired1);
+            await treasuryRebalance.approve(retired2);
+            await treasuryRebalance.finalizeApproval();
+            await hre.network.provider.send("hardhat_mine", ["0x32"]);
+            await treasuryRebalance.finalizeContract("memo");
+            const snapshot = await treasuryRebalance.getSnapshot();
+            expect(snapshot._retirees[0].approvers[0]).to.equal(owner.address);
+            expect(snapshot._retirees[1].approvers[0]).to.equal(owner.address);
+            expect(snapshot._totalRetireesBalance).to.equal(retireesBalance);
+            expect(snapshot._totalNewbiesFund).to.equal(amount);
+            expect(snapshot._status).to.equal(3);
         });
     });
 
