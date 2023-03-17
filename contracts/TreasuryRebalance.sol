@@ -431,35 +431,6 @@ contract TreasuryRebalance is Ownable, ITreasuryRebalance {
     }
 
     /**
-     * @dev get the current value of the state variables
-     */
-    function getSnapshot()
-        public
-        view
-        returns (
-            Retired[] memory _retirees,
-            Newbie[] memory _newbies,
-            uint256 _totalRetireesBalance,
-            uint256 _totalNewbiesFund,
-            Status _status
-        )
-    {     
-        _retirees = retirees;
-        _newbies = newbies;
-        _status = status;
-        _totalRetireesBalance = sumOfRetiredBalance();
-        _totalNewbiesFund = getTreasuryAmount();
-
-        return (
-            _retirees,
-            _newbies,
-            _totalRetireesBalance,
-            _totalNewbiesFund,
-            _status
-        );
-    }
-
-    /**
      * @dev fallback function to revert any payments
      */
     fallback() external payable {

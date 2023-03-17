@@ -563,55 +563,6 @@ describe("TreasuryRebalance", function () {
         });
     });
 
-    describe("snapshot", function () {
-        const amount = hre.ethers.utils.parseEther("10");
-        const retireesBalance = hre.ethers.utils.parseEther("40");
-
-        beforeEach(async function () {
-            await treasuryRebalance.registerRetired(retired1);
-            await treasuryRebalance.registerRetired(retired2);
-            await treasuryRebalance.registerNewbie(newbie1.address, amount);
-        });
-
-        it("snaphot at Registered state", async function () {
-            await treasuryRebalance.finalizeRegistration();
-            const snapshot = await treasuryRebalance.getSnapshot();
-            expect(snapshot._retirees[0].retired).to.equal(retired1);
-            expect(snapshot._retirees[1].retired).to.equal(retired2);
-            expect(snapshot._totalRetireesBalance).to.equal(retireesBalance);
-            expect(snapshot._totalNewbiesFund).to.equal(amount);
-            expect(snapshot._status).to.equal(1);
-        });
-
-        it("snaphot at Approved state", async function () {
-            await treasuryRebalance.finalizeRegistration();
-            await treasuryRebalance.approve(retired1);
-            await treasuryRebalance.approve(retired2);
-            await treasuryRebalance.finalizeApproval();
-            const snapshot = await treasuryRebalance.getSnapshot();
-            expect(snapshot._retirees[0].approvers[0]).to.equal(owner.address);
-            expect(snapshot._retirees[1].approvers[0]).to.equal(owner.address);
-            expect(snapshot._totalRetireesBalance).to.equal(retireesBalance);
-            expect(snapshot._totalNewbiesFund).to.equal(amount);
-            expect(snapshot._status).to.equal(2);
-        });
-
-        it("snaphot at Finalized state", async function () {
-            await treasuryRebalance.finalizeRegistration();
-            await treasuryRebalance.approve(retired1);
-            await treasuryRebalance.approve(retired2);
-            await treasuryRebalance.finalizeApproval();
-            await hre.network.provider.send("hardhat_mine", ["0x32"]);
-            await treasuryRebalance.finalizeContract("memo");
-            const snapshot = await treasuryRebalance.getSnapshot();
-            expect(snapshot._retirees[0].approvers[0]).to.equal(owner.address);
-            expect(snapshot._retirees[1].approvers[0]).to.equal(owner.address);
-            expect(snapshot._totalRetireesBalance).to.equal(retireesBalance);
-            expect(snapshot._totalNewbiesFund).to.equal(amount);
-            expect(snapshot._status).to.equal(3);
-        });
-    });
-
     describe("fallback", function () {
         it("should revert if KLAY is sent to the contract address", async function () {
             await expect(

@@ -126,20 +126,6 @@ interface ITreasuryRebalance {
      */
     function checkRetiredsApproved() external view;
 
-    /**
-     * @dev get the current value of the state variables
-     */
-    function getSnapshot()
-        external
-        view
-        returns (
-            Retired[] memory retirees,
-            Newbie[] memory newbies,
-            uint256 totalRetireesBalance,
-            uint256 totalNewbiesFund,
-            Status status
-    );
-
     // State changing functions
     /**
      * @dev registers retired details
