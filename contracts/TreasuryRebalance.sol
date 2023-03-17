@@ -29,7 +29,7 @@ contract TreasuryRebalance is Ownable, ITreasuryRebalance {
     Newbie[] public newbies; // array of Newbie struct
     Status public status; // current status of the contract
     uint256 public rebalanceBlockNumber; // the target block number of the execution of rebalancing.
-    string public memo; // result of the treasury fund rebalance. eg : `Treasury Rebalanced Successfully`
+    string public memo; // result of the treasury fund rebalance.
 
     /**
      * Modifiers
