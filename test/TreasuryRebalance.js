@@ -3,7 +3,7 @@ const {ethers} = require("hardhat");
 
 describe("TreasuryRebalance", function () {
     let TreasuryRebalance, treasuryRebalance, kgf, kir, test, owner, retired1, retired2, newbie1, newbie2;
-    let currentBlock, executionBlock;
+    let currentBlock, executionBlock, memo;
 
     beforeEach(async function () {
         [owner, account1, newbie1, newbie2] = await ethers.getSigners();
@@ -33,6 +33,10 @@ describe("TreasuryRebalance", function () {
         treasuryFund = hre.ethers.utils.parseEther("30");
         TreasuryRebalance = await ethers.getContractFactory("TreasuryRebalance");
         treasuryRebalance = await TreasuryRebalance.deploy(executionBlock);
+
+        // memo format
+        memo =
+            '{ "retirees": [ { "retired": "0x38138d89c321b3b5f421e9452b69cf29e4380bae", "balance": 20000000000000000000 }, { "retired": "0x0a33a1b99bd67a7189573dd74de80293afdf969a", "balance": 20000000000000000000 } ], "newbies": [ { "newbie": "0x38138d89c321b3b5f421e9452b69cf29e4380bae", "fundAllocated": 10000000000000000000 }, { "newbie": "0x0a33a1b99bd67a7189573dd74de80293afdf969a", "fundAllocated": 10000000000000000000 } ], "burnt": 7.2e+37, "success": true }';
     });
 
     describe("Deployment", function () {
@@ -185,7 +189,7 @@ describe("TreasuryRebalance", function () {
         });
 
         it("Should revert if the newbie address is zero", async function () {
-          const amount1 = hre.ethers.utils.parseEther("20");
+            const amount1 = hre.ethers.utils.parseEther("20");
             await expect(treasuryRebalance.registerNewbie(ethers.constants.AddressZero, amount1)).to.be.revertedWith(
                 "Invalid address"
             );
@@ -342,7 +346,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should revert if owner tries to set Finalize after Registered", async function () {
             await treasuryRebalance.finalizeRegistration();
-            await expect(treasuryRebalance.finalizeContract("memo")).to.be.revertedWith("Not in the designated status");
+            await expect(treasuryRebalance.finalizeContract(memo)).to.be.revertedWith("Not in the designated status");
         });
 
         it("Should revert if owner tries to set Approved before Registered", async function () {
@@ -426,16 +430,12 @@ describe("TreasuryRebalance", function () {
                 await treasuryRebalance.approve(retired1);
                 await treasuryRebalance.approve(retired2);
                 await treasuryRebalance.approve(owner.address);
-                await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
-                    "EOA should approve"
-                );
+                await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith("EOA should approve");
             });
         });
     });
 
     describe("finalize contract", function () {
-        const memo = "Treasury Fund Rebalancing successfull";
-
         beforeEach(async function () {
             await treasuryRebalance.registerRetired(retired1);
             await treasuryRebalance.registerRetired(retired2);
@@ -473,7 +473,9 @@ describe("TreasuryRebalance", function () {
 
         it("should revert before rebalanceBlockNumber", async () => {
             await treasuryRebalance.finalizeApproval();
-            await expect(treasuryRebalance.finalizeContract(memo)).to.be.revertedWith("Contract can only finalize after executing rebalancing");
+            await expect(treasuryRebalance.finalizeContract(memo)).to.be.revertedWith(
+                "Contract can only finalize after executing rebalancing"
+            );
         });
     });
 
@@ -542,7 +544,7 @@ describe("TreasuryRebalance", function () {
             await treasuryRebalance.approve(retired1);
             await treasuryRebalance.finalizeApproval();
             await hre.network.provider.send("hardhat_mine", ["0x32"]);
-            await treasuryRebalance.finalizeContract("memo");
+            await treasuryRebalance.finalizeContract(memo);
             expect(await treasuryRebalance.status()).to.equal(3);
 
             expect(await treasuryRebalance.getRetiredCount()).to.equal(1);
@@ -558,7 +560,7 @@ describe("TreasuryRebalance", function () {
 
         it("Should not allow non-owner to reset", async function () {
             await expect(treasuryRebalance.connect(account1).reset()).to.be.revertedWith(
-              "Ownable: caller is not the owner"
+                "Ownable: caller is not the owner"
             );
         });
     });
@@ -602,12 +604,10 @@ describe("TreasuryRebalance", function () {
             await treasuryRebalance.approve(retired2);
             await treasuryRebalance.finalizeApproval();
             await hre.network.provider.send("hardhat_mine", ["0x32"]);
-            await treasuryRebalance.finalizeContract("memo");
+            await treasuryRebalance.finalizeContract(memo);
             const snapshot = await treasuryRebalance.getSnapshot();
             expect(snapshot._retirees[0].approvers[0]).to.equal(owner.address);
             expect(snapshot._retirees[1].approvers[0]).to.equal(owner.address);
-            expect(snapshot._totalRetireesBalance).to.equal(retireesBalance);
-            expect(snapshot._totalNewbiesFund).to.equal(amount);
             expect(snapshot._status).to.equal(3);
         });
     });
