@@ -44,6 +44,7 @@ contract TreasuryRebalance is Ownable, ITreasuryRebalance {
      * @param _rebalanceBlockNumber is the target block number of the execution the rebalance in Core
      */
     constructor(uint256 _rebalanceBlockNumber) {
+        require(_rebalanceBlockNumber > block.number, "rebalance blockNumber should be greater than current block");
         rebalanceBlockNumber = _rebalanceBlockNumber;
         status = Status.Initialized;
         emit ContractDeployed(status, _rebalanceBlockNumber, block.timestamp);
